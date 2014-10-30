@@ -324,7 +324,7 @@ class VsphereTool(LoggingApp):
                 time.sleep(10)
                 self.create(conn, extra_data, creds)
                 return
-            elif clone.info.error.msg == "The instance already exists":
+            elif clone.info.error.msg == "The name '"+str(vm.name)+"' already exists.":
                 if vm.runtime.powerState == "poweredOn":
                     self.log.error("Assuming configured - moving on")
                     return "exists"
