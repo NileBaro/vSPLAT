@@ -311,6 +311,8 @@ class VsphereTool(LoggingApp):
                 self.log.error(clone.info.error.msg)
             except:
                 self.log.error("No Error - Must be underlying host issues... will try again!")
+                vm.Destroy()
+                time.sleep(10)
                 self.create(conn,extra_data, creds)
                 return
             if clone.info.error.msg == "Cannot connect to host.":
@@ -319,15 +321,14 @@ class VsphereTool(LoggingApp):
                 time.sleep(10)
                 self.create(conn, extra_data, creds)
                 return
-        try:
-            if clone.info.error.msg == "The name '" + vm_name + "' already exists.":
-                self.log.error("The instance already exists")
+            elif clone.info.error.msg == "The instance already exists":
                 if vm.runtime.powerState == "poweredOn":
-                    self.log.info(vm_name + ": Powering on - Assumed configured and moving on to the next! - please delete instance and rerun if this is not the case!")
-                    vm.PowerOnVM_Task()
+                    self.log.error("Assuming configured - moving on")
                     return "exists"
-        except Exception as e:
-            self.log.debug(vm_name + str(e))
+                else:
+                    self.log.error("Turning on instance for configuration!")
+                    vm.PowerOnVM_Task()
+        else:
             self.log.info(vm_name + ": Woohoo! No Errors during the cloning phase!")
         self.log.info(vm_name + ": VM was created on the vSphere")
         time.sleep(10)
