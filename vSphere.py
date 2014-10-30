@@ -269,16 +269,7 @@ class VsphereTool(LoggingApp):
         dvs_port_connection.switchUuid= pg_obj.config.distributedVirtualSwitch.uuid
         nicspec.device.backing = vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
         nicspec.device.backing.port = dvs_port_connection
-        #nicspec.device.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
-        #try:
-        #    nicspec.device.backing.network = self.get_elements_regexed(conn, vim.Network, vlan)[0]
-        #except IndexError as e:
-        #    self.log.debug(e)
-        #    self.log.error(vm_name + ": Could not find requested Network to attach to... Skipping!")
-        #    return
-        #nicspec.device.backing.deviceName = vlan
         nicspec.device.connectable = vim.vm.device.VirtualDevice.ConnectInfo()
-        #nicspec.device.backing.useAutoDetect = True
         nicspec.device.connectable.startConnected = True
         nicspec.device.connectable.allowGuestControl = True
         devices.append(nicspec)
@@ -316,6 +307,12 @@ class VsphereTool(LoggingApp):
             return "error"
         if state == "error":
             self.log.error("Whoops! Your vSphere seems to be having a funny moment")
+            try:
+                self.log.error(clone.info.error.msg)
+            except:
+                self.log.error("No Error - Must be underlying host issues... will try again!")
+                self.create(conn,extra_data, creds)
+                return
             if clone.info.error.msg == "Cannot connect to host.":
                 vm.Destroy()
                 self.log.error("Delete the VM and try again?")
@@ -325,7 +322,7 @@ class VsphereTool(LoggingApp):
         try:
             if clone.info.error.msg == "The name '" + vm_name + "' already exists.":
                 self.log.error("The instance already exists")
-                if vm.runtime.powerState != "poweredOn":
+                if vm.runtime.powerState == "poweredOn":
                     self.log.info(vm_name + ": Powering on - Assumed configured and moving on to the next! - please delete instance and rerun if this is not the case!")
                     vm.PowerOnVM_Task()
                     return "exists"
@@ -544,7 +541,11 @@ class VsphereTool(LoggingApp):
                 attrib = vim.vm.guest.FileManager.FileAttributes()
                 theFile = artifact.split("/")[-1]
                 url = "/tmp/" + theFile
-                gateway = content.guestOperationsManager.fileManager.InitiateFileTransferToGuest(overwrite=True,fileSize=os.path.getsize(artifact),fileAttributes=attrib,guestFilePath=url, vm=vm,auth=creds)
+                try:
+                    gateway = content.guestOperationsManager.fileManager.InitiateFileTransferToGuest(overwrite=True,fileSize=os.path.getsize(artifact),fileAttributes=attrib,guestFilePath=url, vm=vm,auth=creds)
+                except:
+                    self.log.error("There was a problem - trying again...")
+                    self.drop_a_file(creds,regex,artifacts)
                 self.log.debug(gateway)
                 headers =   {'Content-Type': 'application/octet-stream'}
                 with open(artifact, "r") as f:
@@ -812,6 +813,9 @@ class VsphereTool(LoggingApp):
                     if order == "serial":
                         self.log.info("Serial boot of " + extra_data['name'])
                         self.create(connection, extra_data, creds)
+                        if len(t) > 0:
+                            self.log.info("Waiting for previous Parallel threads to complete")
+                            t.join()
                     elif order == "parallel":
                         self.log.info("Parallel boot of " + extra_data['name'])
                         t = Thread(target=self.create, args=[connection, extra_data, creds])
@@ -822,9 +826,9 @@ class VsphereTool(LoggingApp):
                     else:
                         self.log.error("Did not recognise option " + str(order) + " - Skipping!")
                         continue
-                    for t in threads:
-                        self.log.info("Completing background threads: " + str(t.name))
-                        t.join()
+                for t in threads:
+                    self.log.info("Completing background threads: " + str(t.name))
+                    t.join()
         else:
             message = "Please choose a Valid Mode! - You have selected %s" % mode
             self.log.debug(message)
@@ -849,3 +853,5 @@ if __name__ == "__main__":
     vsphere.add_param("-T", "--tokenize", help="Action to decide if a script that you are running on the Virtual Instance needs to be de-tokenized - Requires a definitions.py file", default=None, required=False, action="store_true")
     vsphere.add_param("-TC", "--tokenize-config", help="Action to decide if a run list being processed should be de-tokenized - Requires a definitions.py file", default=None, required=False, action="store_true")
     vsphere.run()
+
+
