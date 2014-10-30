@@ -315,6 +315,9 @@ class VsphereTool(LoggingApp):
                 time.sleep(10)
                 self.create(conn,extra_data, creds)
                 return
+            print "--------"
+            print clone.info.error.msg
+            print "--------"
             if clone.info.error.msg == "Cannot connect to host.":
                 vm.Destroy()
                 self.log.error("Delete the VM and try again?")
