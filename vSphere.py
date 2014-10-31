@@ -547,9 +547,10 @@ class VsphereTool(LoggingApp):
                 url = "/tmp/" + theFile
                 try:
                     gateway = content.guestOperationsManager.fileManager.InitiateFileTransferToGuest(overwrite=True,fileSize=os.path.getsize(artifact),fileAttributes=attrib,guestFilePath=url, vm=vm,auth=creds)
-                except:
+                except Exception as e:
+                    self.log.debug(e)
                     self.log.error("There was a problem - trying again...")
-                    self.drop_a_file(creds,regex,artifacts)
+                    self.drop_a_file(conn,creds,regex,artifacts)
                 self.log.debug(gateway)
                 headers =   {'Content-Type': 'application/octet-stream'}
                 with open(artifact, "r") as f:
