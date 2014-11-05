@@ -340,7 +340,6 @@ class VsphereTool(LoggingApp):
         if state != "poweredOn":
             self.log.warn("There has been a problem... trying to work out what it is and get this VM up!")
             self.log.debug(vm_name + ": " + str(clone.info))
-            self.log.debug(vm_name + ": Clone Error Message - " + str(clone.info.error.msg))
             result = vm.runtime.powerState
             while result != 'poweredOn':
                 self.log.info("VMX Error - Not enough resources... aka Silly vSphere Syndrome!!")
