@@ -770,7 +770,7 @@ class VsphereTool(LoggingApp):
                 quit("Please provide a regex (-r) to match the host to drop your files on")
             if self.params.artifact == None:
                 quit("Please include which files should be dropped on the host (-a [ artifact1, artifact2, artifact3 ])")
-            self.drop_a_file(Connection)
+            self.drop_a_file(connection)
         elif mode == "command":
             if self.params.Command == None:
                 quit("Please provide a command (-C) to run on the GuestOS")
